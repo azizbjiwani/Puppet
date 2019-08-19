@@ -1,0 +1,87 @@
+[root@ip-172-31-80-63 ~]# rpm -Uvh https://yum.puppet.com/puppet6-release-el-7.noarch.rpm
+Retrieving https://yum.puppet.com/puppet6-release-el-7.noarch.rpm
+warning: /var/tmp/rpm-tmp.6mnX1e: Header V4 RSA/SHA256 Signature, key ID ef8d349f: NOKEY
+Verifying...                          ################################# [100%]
+Preparing...                          ################################# [100%]
+Updating / installing...
+   1:puppet6-release-6.0.0-5.el7      ################################# [100%]
+
+[root@ip-172-31-80-63 ~]# yum install -y puppet-agent
+Installed:
+  puppet-agent-6.7.2-1.el7.x86_64
+
+Edit hosts and Puppet configuration files in Puppet Agent
+[root@ip-172-31-80-63 ~]# ifconfig -a| grep inet
+        inet 172.31.80.63  netmask 255.255.240.0  broadcast 172.31.95.255
+[root@ip-172-31-80-63 ~]# vi /etc/hosts
+172.31.80.63 puppetagent
+172.31.85.92 puppet puppet.edureka.co
+
+[root@ip-172-31-80-63 ~]# vi /etc/puppetlabs/puppet/puppet.conf
+[agent]
+server = puppet.edureka.co
+
+[root@ip-172-31-80-63 ~]# source /etc/profile.d/puppet-agent.sh
+[root@ip-172-31-80-63 ~]# puppet agent -t
+Info: Downloaded certificate for ca from puppet.edureka.co
+Info: Downloaded certificate revocation list for ca from puppet.edureka.co
+Info: Creating a new RSA SSL key for ip-172-31-80-63.ec2.internal
+Info: csr_attributes file loading from /etc/puppetlabs/puppet/csr_attributes.yaml
+Info: Creating a new SSL certificate request for ip-172-31-80-63.ec2.internal
+Info: Certificate Request fingerprint (SHA256): EE:D6:D9:2E:B6:5F:9E:57:7E:9A:76:57:66:3E:79:5F:0E:80:2D:9F:88:C6:8F:7B:8B:19:8F:0C:BE:17:8C:5A
+Info: Certificate for ip-172-31-80-63.ec2.internal has not been signed yet
+Couldn't fetch certificate from CA server; you might still need to sign this agent's certificate (ip-172-31-80-63.ec2.internal).
+Exiting now because the waitforcert setting is set to 0.
+
+Execute this (on master):
+[root@puppet:~]# puppetserver ca list --all
+Requested Certificates:
+    ip-172-31-89-124.ec2.internal   (SHA256)  EA:33:EA:CA:4D:9B:75:65:DE:20:51:D3:B2:66:66:A7:6E:7C:7E:71:19:72:35:12:2B:FB:B3:AA:6F:BD:9E:E7
+    ip-172-31-80-63.ec2.internal    (SHA256)  EE:D6:D9:2E:B6:5F:9E:57:7E:9A:76:57:66:3E:79:5F:0E:80:2D:9F:88:C6:8F:7B:8B:19:8F:0C:BE:17:8C:5A
+Signed Certificates:
+    puppet               (SHA256)  C8:2C:FC:86:D8:21:CF:28:88:4C:B0:99:19:64:32:BB:2F:B2:29:09:68:3F:0C:61:13:43:BE:7E:85:3A:94:09	alt names: ["DNS:puppet", "DNS:puppet.edureka.co", "DNS:puppet"]
+    puppet.localdomain   (SHA256)  7A:58:40:F9:75:A6:26:BF:4B:EF:71:DD:71:38:75:29:77:C5:33:7A:9C:F2:4D:E4:75:49:26:DE:55:31:B3:1C
+
+[root@puppet:~]# puppetserver ca sign  --all
+Successfully signed certificate request for ip-172-31-89-124.ec2.internal
+Successfully signed certificate request for ip-172-31-80-63.ec2.internal
+
+Update Puppet Agent
+Execute this (on agent):
+[root@ip-172-31-80-63 ~]# puppet resource service puppet ensure=running enable=true
+Notice: /Service[puppet]/ensure: ensure changed 'stopped' to 'running'
+service { 'puppet':
+  ensure => 'running',
+  enable => 'true',
+}
+
+[root@puppet:~]# puppetserver ca list --all
+Signed Certificates:
+    puppet                          (SHA256)  C8:2C:FC:86:D8:21:CF:28:88:4C:B0:99:19:64:32:BB:2F:B2:29:09:68:3F:0C:61:13:43:BE:7E:85:3A:94:09	alt names: ["DNS:puppet", "DNS:puppet.edureka.co", "DNS:puppet"]
+    puppet.localdomain              (SHA256)  7A:58:40:F9:75:A6:26:BF:4B:EF:71:DD:71:38:75:29:77:C5:33:7A:9C:F2:4D:E4:75:49:26:DE:55:31:B3:1C
+    ip-172-31-89-124.ec2.internal   (SHA256)  FC:0D:06:93:7E:49:BD:15:40:17:44:A6:9C:BD:98:FA:49:07:46:D7:9C:6B:B2:9C:77:D4:AB:66:84:01:33:F6
+    ip-172-31-80-63.ec2.internal    (SHA256)  16:CE:30:CE:D2:F1:DF:76:FF:0B:FA:8D:B7:1E:67:E0:DB:02:63:22:CF:D8:65:A1:15:49:63:32:D2:BE:C3:D9
+
+Master:
+[root@puppet:~]# vi /etc/puppetlabs/code/environments/production/manifests/site.pp
+class {  'java' :
+ package =&gt; 'java-1.8.0-openjdk-devel':
+ }
+ tomcat::install { '/opt/tomcat':
+   source_url =&gt; 'http://apache.claz.org/tomcat/tomcat-8/v8.5.43/bin/apache-tomcat-8.5.43.tar.gz',
+ }
+ tomcat::instance { 'default':
+ catalana_home =&gt; '/opt/tomcat',
+ }
+
+Verify Puppet Client
+Once the Puppet Server has signed your client certificate, run the following command on the client machine to test it.
+[root@ip-172-31-80-63 ~]# puppet agent --test
+Info: Using configured environment 'production'
+Info: Retrieving pluginfacts
+Info: Retrieving plugin
+Info: Retrieving locales
+Info: Loading facts
+Error: Could not retrieve catalog from remote server: Error 500 on SERVER: Server Error: Evaluation Error: Error while evaluating a Resource Statement, Unknown resource type: 'tomcat::install' (file: /etc/puppetlabs/code/environments/production/manifests/site.pp, line: 2, column: 1) on node ip-172-31-80-63.ec2.internal
+Warning: Not using cache on failed catalog
+Error: Could not retrieve catalog; skipping run
