@@ -85,3 +85,37 @@ Info: Loading facts
 Error: Could not retrieve catalog from remote server: Error 500 on SERVER: Server Error: Evaluation Error: Error while evaluating a Resource Statement, Unknown resource type: 'tomcat::install' (file: /etc/puppetlabs/code/environments/production/manifests/site.pp, line: 2, column: 1) on node ip-172-31-80-63.ec2.internal
 Warning: Not using cache on failed catalog
 Error: Could not retrieve catalog; skipping run
+
+[root@puppet:manifests]# pwd
+/etc/puppetlabs/code/environments/production/manifests
+[root@puppet:manifests]# vi site.pp
+class { 'java' :
+  package => 'java-1.8.0-openjdk-devel',
+}
+class { 'tomcat': }
+tomcat::instance { 'test':
+  source_url => 'http://apache.claz.org/tomcat/tomcat-8/v8.5.43/bin/apache-tomcat-8.5.43.tar.gz'
+}->
+tomcat::service { 'default': }
+
+
+[root@ip-172-31-80-63 ~]# puppet agent --test
+Info: Using configured environment 'production'
+Info: Retrieving pluginfacts
+Info: Retrieving plugin
+Info: Retrieving locales
+Info: Loading facts
+Info: Caching catalog for ip-172-31-80-63.ec2.internal
+Info: Applying configuration version '1566314283'
+Notice: /Stage[main]/Java/Package[java]/ensure: created
+Notice: /Stage[main]/Java::Config/File_line[java-home-environment]/ensure: created
+Notice: /Stage[main]/Tomcat/Group[tomcat]/ensure: created
+Notice: /Stage[main]/Tomcat/User[tomcat]/ensure: created
+Notice: /Stage[main]/Tomcat/File[/opt/apache-tomcat]/ensure: created
+Notice: /Stage[main]/Staging/File[/opt/staging]/ensure: created
+Notice: /Stage[main]/Main/Tomcat::Instance[test]/Tomcat::Instance::Source[test]/Staging::File[apache-tomcat-8.5.43.tar.gz]/File[/opt/staging/tomcat]/ensure: created
+Notice: /Stage[main]/Main/Tomcat::Instance[test]/Tomcat::Instance::Source[test]/Staging::File[apache-tomcat-8.5.43.tar.gz]/Exec[/opt/staging/tomcat/apache-tomcat-8.5.43.tar.gz]/returns: executed successfully
+Notice: /Stage[main]/Main/Tomcat::Instance[test]/Tomcat::Instance::Source[test]/Staging::Extract[test-apache-tomcat-8.5.43.tar.gz]/Exec[extract test-apache-tomcat-8.5.43.tar.gz]/returns: executed successfully
+Notice: /Stage[main]/Main/Tomcat::Service[default]/Service[tomcat-default]/ensure: ensure changed 'stopped' to 'running'
+Info: /Stage[main]/Main/Tomcat::Service[default]/Service[tomcat-default]: Unscheduling refresh on Service[tomcat-default]
+Notice: Applied catalog in 21.05 seconds
